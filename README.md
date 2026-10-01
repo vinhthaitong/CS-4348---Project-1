@@ -131,4 +131,3 @@ cat output.txt
 `make bonus` builds the separate bonus source as `my-sum`, the executable name
 required by the assignment. To switch back to the original version, run
 `make build`. The original source is `my-sum.cpp`.
-# CS-4348---Project-1
