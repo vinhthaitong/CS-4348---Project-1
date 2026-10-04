@@ -35,17 +35,32 @@ bool readPositiveInt(const char *text, int &value)
     return true;
 }
 
-// volatile makes every loop check reread flags that other workers may change.
-void arriveAndWait(volatile unsigned char *wall, int worker, int m)
-{
-    wall[worker] = 1;
+struct Barrier {
+    // volatile makes workers reread values changed by other workers.
+    volatile int arrived;
+    volatile int generation;
+};
 
-    for (int i = 0; i < m; i++)
-        while (wall[i] == 0)
+void arriveAndWait(Barrier *barrier, int worker, int m, int generation)
+{
+    // Workers announce their arrival in worker-number order.
+    while (barrier->arrived != worker)
+        ;
+
+    barrier->arrived = worker + 1;
+
+    if (worker == m - 1) {
+        // The last worker resets the barrier and releases everyone.
+        // Keeping track of only 2 variables (O(n))
+        barrier->arrived = 0;
+        barrier->generation = generation;
+    } else {
+        while (barrier->generation < generation)
             ;
+    }
 }
 
-void compute(long long *rows, volatile unsigned char *walls, int n, int m, int worker, int rounds)
+void compute(long long *rows, Barrier *barrier, int n, int m, int worker, int rounds)
 {
     int base = n / m;
     int extra = n % m;
@@ -54,8 +69,9 @@ void compute(long long *rows, volatile unsigned char *walls, int n, int m, int w
     int offset = 1;
 
     for (int round = 0; round < rounds; round++) {
-        long long *current = rows + round * n;
-        long long *next = current + n;
+        // Alternate between two rows so old storage can be reused. (2n -> O(n))
+        long long *current = rows + (round % 2) * n;
+        long long *next = rows + ((round + 1) % 2) * n;
 
         for (int i = start; i < end; i++) {
             if (i < offset)
@@ -64,7 +80,7 @@ void compute(long long *rows, volatile unsigned char *walls, int n, int m, int w
                 next[i] = current[i] + current[i - offset];
         }
 
-        arriveAndWait(walls + round * m, worker, m);
+        arriveAndWait(barrier, worker, m, round + 1);
 
         if (round + 1 < rounds)
             offset *= 2;
@@ -110,8 +126,7 @@ bool waitForWorkers(pid_t *children, int count)
 void stopWorkers(pid_t *children, int count)
 {
     for (int i = 0; i < count; i++) {
-        if (children[i] != 0 &&
-            kill(children[i], SIGTERM) < 0 && errno != ESRCH)
+        if (children[i] != 0 && kill(children[i], SIGTERM) < 0 && errno != ESRCH)
             reportError("kill");
     }
 
@@ -150,8 +165,8 @@ int main(int argc, char *argv[])
         rounds++;
 
     // size_t is the standard type for memory sizes and byte counts.
-    size_t rowBytes = static_cast<size_t>(n) * (rounds + 1) * sizeof(long long);
-    size_t wallBytes = static_cast<size_t>(rounds) * m;
+    size_t rowBytes = static_cast<size_t>(n) * 2 * sizeof(long long);
+    size_t sharedBytes = rowBytes + sizeof(Barrier);
 
     pid_t *children = new (nothrow) pid_t[m];
     if (children == nullptr) {
@@ -159,8 +174,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // Create one shared-memory segment for all rows and barrier flags.
-    int memoryId = shmget(IPC_PRIVATE, rowBytes + wallBytes, IPC_CREAT | 0600);
+    // Create one shared-memory segment for two rows and the reusable barrier.
+    int memoryId = shmget(IPC_PRIVATE, sharedBytes, IPC_CREAT | 0600);
     if (memoryId < 0) {
         reportError("shmget");
         delete[] children;
@@ -180,9 +195,8 @@ int main(int argc, char *argv[])
     }
 
     long long *rows = static_cast<long long *>(memory);
-
-    // volatile makes workers reread barrier flags changed by other workers.
-    volatile unsigned char *walls = static_cast<unsigned char *>(memory) + rowBytes;
+    Barrier *barrier = reinterpret_cast<Barrier *>(
+        static_cast<unsigned char *>(memory) + rowBytes);
 
     bool success = true;
     ifstream input(argv[3]);
@@ -222,7 +236,7 @@ int main(int argc, char *argv[])
             reportError("fork");
             success = false;
         } else if (pid == 0) {
-            compute(rows, walls, n, m, worker, rounds);
+            compute(rows, barrier, n, m, worker, rounds);
             bool ok = true;
 
             // Disconnect this child process from shared memory.
@@ -247,7 +261,7 @@ int main(int argc, char *argv[])
             cerr << "my-sum: cannot open output file: " << argv[4] << '\n';
             success = false;
         } else {
-            long long *answer = rows + rounds * n;
+            long long *answer = rows + (rounds % 2) * n;
             for (int i = 0; i < n; i++) {
                 output << answer[i] << (i + 1 == n ? '\n' : ' ');
                 if (!output) {

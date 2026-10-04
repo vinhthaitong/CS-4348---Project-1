@@ -2,8 +2,8 @@
 
 ## Team members
 
-- Thai Tong
-- Hoa Doan
+- Thai Tong (vxt220041)
+- Hoa Doan (nxd240013)
 
 ## Upload to CS1 and run the sample
 
@@ -33,14 +33,11 @@ The commands below assume the folder is named `Project 1`; adjust the remote
    make
    ```
 
-`make` compiles the original version, runs the sample, and displays the output:
+`make` compiles the program, runs the sample, and displays the output:
 
 ```text
 1 3 6 10 15 21 28 36
 ```
-
-To run the bonus version after uploading, follow the **Bonus version** section
-below.
 
 ## Other department machines
 
@@ -104,30 +101,17 @@ Expected contents of `output.txt`:
 The program writes results to the output file. Errors are printed to standard
 error and cause a nonzero exit status.
 
-## Other Makefile commands
+### Alternatively, use `make`
 
-- `make`: compile the original version, run the included example, and display `output.txt`.
-- `make build`: compile `my-sum.cpp` as the executable `my-sum`.
-- `make bonus`: compile `my-sum-bonus.cpp` as the executable `my-sum`.
-- `make clean`: remove the compiled executable.
-
-## Bonus version
-
-`my-sum-bonus.cpp` implements a reusable barrier with two shared counters
-(O(1) barrier storage) and alternates between two array buffers (O(n) total
-algorithm storage). Workers announce arrival in worker-ID order using only
-shared-memory reads and writes. The last worker resets the arrival counter
-and advances the generation to release the other workers. Each round still
-uses the Hillis–Steele update and evenly divided work.
-
-On a department machine, compile and run the bonus version with:
+Run `make` to compile the program, execute the included example, and display
+the contents of `output.txt` in one step:
 
 ```sh
-make bonus
-./my-sum 8 5 input.txt output.txt
-cat output.txt
+make
 ```
 
-`make bonus` builds the separate bonus source as `my-sum`, the executable name
-required by the assignment. To switch back to the original version, run
-`make build`. The original source is `my-sum.cpp`.
+## Other Makefile commands
+
+- `make`: compile the program, run the included example, and display `output.txt`.
+- `make build`: compile `my-sum.cpp` as the executable `my-sum`.
+- `make clean`: remove the compiled executable.
