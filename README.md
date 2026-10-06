@@ -9,14 +9,14 @@
 
 Use `scp` to copy the project folder from your computer to CS1. Replace
 `your_netid` with your UTD NetID in the commands below.
-Replace `/path/to/Project 1` with the path to your local project folder.
-The commands below assume the folder is named `Project 1`; adjust the remote
+Replace `/path/to/Team23-Project 1` with the path to your local project folder.
+The commands below assume the folder is named `Team23-Project 1`; adjust the remote
 `cd` command if your folder has a different name.
 
 1. In your **local terminal**, upload the folder:
 
    ```sh
-   scp -r "/path/to/Project 1" your_netid@cs1.utdallas.edu:~/
+   scp -r "/path/to/Team23-Project 1" your_netid@cs1.utdallas.edu:~/
    ```
 
 2. Connect to CS1 and complete the login prompts:
@@ -28,7 +28,7 @@ The commands below assume the folder is named `Project 1`; adjust the remote
 3. Once logged in, open the copied folder, rebuild for CS1, and run the sample:
 
    ```sh
-   cd "$HOME/Project 1"
+   cd "$HOME/Team23-Project 1"
    make clean
    make
    ```
@@ -55,7 +55,7 @@ ssh your_netid@giant.utdallas.edu
 After logging in, open the copied project directory:
 
 ```sh
-cd "$HOME/Project 1"
+cd "$HOME/Team23-Project 1"
 ```
 
 ## Compile the program
